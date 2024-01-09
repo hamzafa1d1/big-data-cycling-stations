@@ -18,3 +18,6 @@ after that you can run the main script with spark-submit
 
     spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 consumer.py
 
+visualization of data using kibana 
+![alt text](plot2.png)
+
