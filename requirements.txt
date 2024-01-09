@@ -1,0 +1,4 @@
+kafka-python==2.0.2
+pyspark==3.5.0
+elastic-transport==8.10.0
+elasticsearch==8.10.1

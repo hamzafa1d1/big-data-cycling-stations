@@ -1,0 +1,79 @@
+version: '1'
+
+services:
+  # Hive service
+  hive:
+    image: hive_image
+    build:
+      context: .
+      dockerfile: Dockerfile-hive
+    depends_on:
+      - hdfs
+    environment:
+      HIVE_VERSION: "3.1.2"
+      TEZ_VERSION: "0.9.2"
+    working_dir: /opt/hive/bin
+    volumes:
+      - /opt/hive:/opt/hive
+
+      
+ # Elasticsearch service
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.16
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: single-node
+
+
+  # Zookeeper service for Kafka
+  zookeeper:
+    image: wurstmeister/zookeeper:3.4.6
+    ports:
+      - "2181:2181"
+
+  # Kafka service
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    expose:
+      - "9093"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9093,OUTSIDE://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9093,OUTSIDE://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CREATE_TOPICS: "velib-stations:1:1"
+
+  # Kibana service
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.16
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+
+  # Spark Streaming application service
+  spark-streaming-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ~/kafka_2.13-3.6.0
+    depends_on:
+      - kafka
+      - elasticsearch
+    environment:
+      SPARK_ES_NODES: elasticsearch
+      SPARK_ES_PORT: 9200
+      SPARK_KAFKA_BOOTSTRAP_SERVERS: kafka:9093
+      SPARK_SQL_WAREHOUSE_DIR: /app/spark-warehouse
+      SPARK_ES_NODES_WAN_ONLY: "true"
+
+  # HDFS service
+  hdfs:
+    image: sequenceiq/hadoop-docker:latest
+    environment:
+      HADOOP_VERSION: "3.3.6"
